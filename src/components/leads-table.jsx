@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
 import { SquareActivityIcon } from "lucide-react"
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
 
 
 export function LeadsTable({
@@ -20,9 +21,9 @@ export function LeadsTable({
 }) {
     const [searchValue, setSearchValue] = useState("")
     const [updateText, setUpdateText] = useState("")
-    //   const [editingLead, setEditingLead] = useState(null)
     const updateTextareaRef = useRef(null)
     const [isInlineEditing, setIsInlineEditing] = useState(false)
+    const [localLeads, setLocalLeads] = useState(leads)
 
     const handleSearchChange = (e) => {
         const value = e.target.value
@@ -41,6 +42,13 @@ export function LeadsTable({
         } else {
             onStatusFilter(value)
         }
+    }
+
+    const handleStatusUpdate = (leadId, newStatus) => {
+        const updatedLeads = localLeads.map(lead => 
+            lead.id === leadId ? {...lead, status: newStatus} : lead
+        )
+        setLocalLeads(updatedLeads)
     }
 
     const getStatusColor = (status) => {
@@ -88,10 +96,18 @@ export function LeadsTable({
     }
 
     const handleInlineUpdateSave = (action) => {
-        console.log(`Saving update for lead ${selectedLead.id} with action ${action}: ${updateText}`)
-        setIsInlineEditing(false)
+        if(action=="approve"){
+            setLocalLeads(localLeads.map(lead => 
+                lead.id === selectedLead.id ? {...lead, lastUpdate: updateText} : lead
+            ))
+            setIsInlineEditing(false)
+        }
+        return
     }
 
+    const handleTextareaChange = (e) => {
+        setUpdateText(e.target.value)
+    }
 
     const formatLastUpdate = (text) => {
         if (!text) return "";
@@ -137,7 +153,6 @@ export function LeadsTable({
 
                         </SelectTrigger>
                         <SelectContent>
-                            <SelectItem value="all">All Statuses</SelectItem>
                             <SelectItem value="created">Created</SelectItem>
                             <SelectItem value="assigned">Assigned</SelectItem>
                             <SelectItem value="estimate shared">Estimate Shared</SelectItem>
@@ -226,7 +241,7 @@ export function LeadsTable({
                         </tr>
                     </thead>
                     <tbody>
-                        {leads.map((lead) => (
+                        {localLeads.map((lead) => (
                             <tr
                                 key={lead.id}
                                 className={cn(
@@ -239,12 +254,26 @@ export function LeadsTable({
                                 <td className="px-4 py-2 text-sm">{lead.clientName}</td>
 
                                 <td className="px-4 py-2 text-sm">
-                                    <div className="flex items-center">
-                                        <Badge variant="outline" className={cn(getStatusColor(lead.status), "border-0 rounded-md px-2")}>
-                                            {lead.status}
-                                        </Badge>
-                                        <ChevronDown className="h-4 w-4 ml-1 text-gray-400" />
-                                    </div>
+                                    <DropdownMenu>
+                                        <DropdownMenuTrigger>
+                                            <div className="flex items-center" onClick={(e) => e.stopPropagation()}>
+                                                <Badge variant="outline" className={cn(getStatusColor(lead.status), "border-0 rounded-md px-2")}>
+                                                    {lead.status}
+                                                </Badge>
+                                                <ChevronDown className="h-4 w-4 ml-1 text-gray-400" />
+                                            </div>
+                                        </DropdownMenuTrigger>
+                                        <DropdownMenuContent>
+                                            <DropdownMenuLabel>
+                                                {lead.status}
+                                            </DropdownMenuLabel>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onClick={() => handleStatusUpdate(lead.id, "Created")}>Created</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleStatusUpdate(lead.id, "Assigned")}>Assigned</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleStatusUpdate(lead.id, "Estimate Shared")}>Estimate Shared</DropdownMenuItem>
+                                            <DropdownMenuItem onClick={() => handleStatusUpdate(lead.id, "Visit Planned")}>Visit Planned</DropdownMenuItem>
+                                        </DropdownMenuContent>
+                                    </DropdownMenu>
                                 </td>
 
                                 <td className="px-4 py-2 text-sm">{lead.phone}</td>
@@ -262,16 +291,20 @@ export function LeadsTable({
                                 <td className="px-4 py-2 text-sm">{lead.createdDate}</td>
                                 <td className="px-4 py-2 text-sm">{lead.projectName}</td>
 
-                                <td className="px-4 py-2 text-sm flex">
-
-                                    {lead.assignedTo.map((assignedTo, index) => (
-                                        <div key={index}>
-                                            <div className="h-6 px-2 rounded-full bg-gray-100 border  border-gray-700 inline-flex items-center justify-center text-xs">
-                                                {assignedTo}
+                                <td className="px-4 py-2 text-sm">
+                                    <div className="flex flex-wrap gap-1">
+                                        {Array.isArray(lead.assignedTo) ? (
+                                            lead.assignedTo.map((assignedTo, index) => (
+                                                <div key={index} className="h-6 px-2 rounded-full bg-gray-100 border border-gray-700 inline-flex items-center justify-center text-xs">
+                                                    {assignedTo}
+                                                </div>
+                                            ))
+                                        ) : (
+                                            <div className="h-6 px-2 rounded-full bg-gray-100 border border-gray-700 inline-flex items-center justify-center text-xs">
+                                                {lead.assignedTo}
                                             </div>
-
-                                        </div>
-                                    ))}
+                                        )}
+                                    </div>
                                 </td>
 
                                 <td className="px-4 py-2 text-sm">{lead.budget || ""}</td>
@@ -283,15 +316,19 @@ export function LeadsTable({
                                                 <Textarea
                                                     ref={updateTextareaRef}
                                                     value={updateText}
-                                                    onChange={(e) => setUpdateText(e.target.value)}
+                                                    onChange={handleTextareaChange}
                                                     className="min-h-[60px] text-xs flex-grow"
+                                                    onClick={(e) => e.stopPropagation()}
                                                 />
                                                 <div className="flex flex-col gap-1 ml-2">
                                                     <Button
                                                         variant="ghost"
                                                         size="icon"
                                                         className="h-6 w-6 bg-green-100 text-green-700 hover:bg-green-200 rounded-full"
-                                                        onClick={() => handleInlineUpdateSave("approve")}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleInlineUpdateSave("approve");
+                                                        }}
                                                     >
                                                         <Check className="h-3 w-3" />
                                                     </Button>
@@ -299,7 +336,10 @@ export function LeadsTable({
                                                         variant="ghost"
                                                         size="icon"
                                                         className="h-6 w-6 bg-red-100 text-red-700 hover:bg-red-200 rounded-full"
-                                                        onClick={() => handleInlineUpdateSave("reject")}
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleInlineUpdateSave("reject");
+                                                        }}
                                                     >
                                                         <X className="h-3 w-3" />
                                                     </Button>

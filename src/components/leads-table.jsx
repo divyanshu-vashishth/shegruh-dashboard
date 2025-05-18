@@ -52,6 +52,7 @@ export function LeadsTable({
             lead.id === leadId ? {...lead, status: newStatus} : lead
         )
         setLocalLeads(updatedLeads)
+        onLeadChange(updatedLeads)
     }
 
     const getStatusColor = (status) => {

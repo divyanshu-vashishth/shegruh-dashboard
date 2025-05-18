@@ -18,12 +18,14 @@ export function LeadsTable({
     sortConfig,
     selectedLead,
     onSelectLead,
+    onLeadChange,
 }) {
     const [searchValue, setSearchValue] = useState("")
     const [updateText, setUpdateText] = useState("")
     const updateTextareaRef = useRef(null)
     const [isInlineEditing, setIsInlineEditing] = useState(false)
     const [localLeads, setLocalLeads] = useState(leads)
+    const [statusFilter, setStatusFilter] = useState("all")
 
     const handleSearchChange = (e) => {
         const value = e.target.value
@@ -37,6 +39,7 @@ export function LeadsTable({
     }
 
     const handleStatusChange = (value) => {
+        setStatusFilter(value)
         if (value === "all") {
             onStatusFilter(null)
         } else {
@@ -100,9 +103,11 @@ export function LeadsTable({
             setLocalLeads(localLeads.map(lead => 
                 lead.id === selectedLead.id ? {...lead, lastUpdate: updateText} : lead
             ))
+            onLeadChange(localLeads)
+            setIsInlineEditing(false)
+        }else{
             setIsInlineEditing(false)
         }
-        return
     }
 
     const handleTextareaChange = (e) => {
@@ -146,21 +151,22 @@ export function LeadsTable({
                         )}
                     </div>
 
-                    <Select defaultValue="all" onValueChange={handleStatusChange}>
+                    <Select value={statusFilter} onValueChange={handleStatusChange}>
                         <SelectTrigger className="w-[200px]">
-                            <SelectValue placeholder="All Statuses" />
+                            <SelectValue>
+                                {statusFilter === "all" ? "All Statuses" : 
+                                    statusFilter.charAt(0).toUpperCase() + statusFilter.slice(1)}
+                            </SelectValue>
                             <span className="text-gray-500">+{leads.length}</span>
-
                         </SelectTrigger>
                         <SelectContent>
+                            <SelectItem value="all">All Statuses</SelectItem>
                             <SelectItem value="created">Created</SelectItem>
                             <SelectItem value="assigned">Assigned</SelectItem>
                             <SelectItem value="estimate shared">Estimate Shared</SelectItem>
                             <SelectItem value="visit planned">Visit Planned</SelectItem>
                         </SelectContent>
-
                     </Select>
-
 
                     <Button variant="ghost" size="icon">
                         <Filter className="h-4 w-4" />
@@ -241,7 +247,7 @@ export function LeadsTable({
                         </tr>
                     </thead>
                     <tbody>
-                        {localLeads.map((lead) => (
+                        {leads.map((lead) => (
                             <tr
                                 key={lead.id}
                                 className={cn(

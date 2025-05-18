@@ -102,6 +102,7 @@ export function Dashboard() {
                         onSelectLead={handleLeadSelect}
                         isUpdateModalOpen={isUpdateModalOpen}
                         onUpdateModal={handleUpdateModal}
+                        onLeadChange={setLeads}
                     />
                 </main>
             </div>
